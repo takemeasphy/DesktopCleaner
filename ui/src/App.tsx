@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { DesktopFile } from "./types";
 import { mockFiles } from "./mockData";
+import { CircularProgress } from "./components/CircularProgress";
 import "./App.css";
 
 function formatSize(bytes: number): string {
@@ -11,23 +12,70 @@ function formatSize(bytes: number): string {
 }
 
 function App() {
-  const [files] = useState<DesktopFile[]>(mockFiles);
+  const [files, setFiles] = useState<DesktopFile[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const isFileProtocol = window.location.protocol === "file:";
+
+  useEffect(() => {
+    if (isFileProtocol) {
+      fetch("files.json")
+        .then((res) => res.json())
+        .then((data) => {
+          setFiles(data.files as DesktopFile[]);
+        })
+        .catch((err) => {
+          console.error("Failed to load files.json", err);
+          setError("Не вдалося завантажити дані, показую моки.");
+          setFiles(mockFiles);
+        });
+    } else {
+      setFiles(mockFiles);
+    }
+  }, [isFileProtocol]);
+
+  if (!files) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <h1>DesktopCleaner</h1>
+          <p>Loading...</p>
+        </header>
+      </div>
+    );
+  }
 
   const totalSize = files.reduce((sum, f) => sum + f.size_bytes, 0);
+
+  const maxFilesFor100 = 50;
+  const cleanlinessPercent = Math.max(
+    0,
+    Math.min(100, 100 - (files.length / maxFilesFor100) * 100)
+  );
 
   return (
     <div className="app">
       <header className="app-header">
         <h1>DesktopCleaner</h1>
-        <p>Прототип інтерфейсу з мок-даними</p>
+        <p>Prototype dashboard for desktop files</p>
+        {error && <p style={{ color: "#b91c1c", marginTop: 4 }}>{error}</p>}
       </header>
 
       <section className="summary">
-        <div>
-          <strong>Файлів на Desktop (mock):</strong> {files.length}
-        </div>
-        <div>
-          <strong>Сумарний розмір:</strong> {formatSize(totalSize)}
+        <div className="summary-progress">
+          <CircularProgress value={Math.round(cleanlinessPercent)} />
+
+          <div className="summary-text">
+            <div>
+              <strong>Файлів на Desktop:</strong> {files.length}
+            </div>
+            <div>
+              <strong>Сумарний розмір:</strong> {formatSize(totalSize)}
+            </div>
+            <div>
+              <strong>Cleanliness score:</strong> {Math.round(cleanlinessPercent)}%
+            </div>
+          </div>
         </div>
       </section>
 
@@ -61,4 +109,3 @@ function App() {
 }
 
 export default App;
-
