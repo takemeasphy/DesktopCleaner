@@ -1,9 +1,13 @@
+:root {
+  color-scheme: light;
+}
+
 .app {
   min-height: 100vh;
   padding: 24px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #050816;
-  color: #e5e7eb;
+  background: #f5f5f7;          
+  color: #111827;                
 }
 
 .app-header h1 {
@@ -13,25 +17,47 @@
 
 .app-header p {
   margin: 4px 0 16px;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .summary {
   display: flex;
+  align-items: center;
   gap: 24px;
   margin-bottom: 16px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: #111827;
-  border: 1px solid #1f2937;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summary-text div {
+  font-size: 14px;
+}
+
+.summary-text strong {
+  font-weight: 600;
 }
 
 .table-wrapper {
   margin-top: 16px;
-  padding: 16px;
-  border-radius: 12px;
-  background: #111827;
-  border: 1px solid #1f2937;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.table-wrapper h2 {
+  margin-top: 0;
+  font-size: 18px;
 }
 
 table {
@@ -48,13 +74,27 @@ td {
 }
 
 thead tr {
-  border-bottom: 1px solid #1f2937;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
 }
 
 tbody tr:nth-child(even) {
-  background: rgba(31, 41, 55, 0.6);
+  background: #f9fafb;
 }
 
 tbody tr:hover {
-  background: rgba(55, 65, 81, 0.8);
+  background: #e5f0ff;
+}
+
+td:first-child {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary-progress {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
