@@ -1,15 +1,15 @@
 import React from "react";
 
 interface CircularProgressProps {
-  value: number;    
+  value: number;      
   size?: number;      
   strokeWidth?: number;
 }
 
 export const CircularProgress: React.FC<CircularProgressProps> = ({
   value,
-  size = 90,
-  strokeWidth = 10,
+  size = 140,         
+  strokeWidth = 14,   
 }) => {
   const clamped = Math.min(100, Math.max(0, value));
   const radius = (size - strokeWidth) / 2;
@@ -28,7 +28,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
           cy={size / 2}
         />
         <circle
-          stroke="#3b82f6"
+          stroke="#22c55e" 
           fill="transparent"
           strokeWidth={strokeWidth}
           r={radius}
@@ -44,7 +44,6 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
           }}
         />
       </svg>
-
       <div
         style={{
           position: "absolute",
@@ -52,7 +51,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 16,
+          fontSize: 20,
           fontWeight: 600,
           color: "#111827",
         }}
