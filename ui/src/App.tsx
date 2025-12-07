@@ -5,6 +5,16 @@ import { CircularProgress } from "./components/CircularProgress";
 import { MiniBarChart, type MiniBarDatum } from "./components/MiniBarChart";
 import { TEXTS, nextLang, type Lang } from "./i18n";
 import "./App.css";
+import SettingsIcon from "./assets/Settings.png";
+import UkIcon from "./assets/UKR.png";
+import RuIcon from "./assets/RUS.png";
+import EnIcon from "./assets/ENG.png";
+
+const LANG_ICONS: Record<Lang, string> = {
+  uk: UkIcon,
+  ru: RuIcon,
+  en: EnIcon,
+};
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -46,13 +56,13 @@ function App() {
         })
         .catch((err) => {
           console.error("Failed to load files.json", err);
-          setError(t.errorFallback);
+          setError(TEXTS.uk.errorFallback);
           setFiles(mockFiles);
         });
     } else {
       setFiles(mockFiles);
     }
-  }, [isFileProtocol]); 
+  }, [isFileProtocol]);
 
   if (!files) {
     return <div className="app">{t.loading}</div>;
@@ -91,17 +101,27 @@ function App() {
         <div className="topbar-buttons">
           <button
             type="button"
-            className="top-btn"
+            className="top-btn top-btn-icon"
             onClick={handleSettingsClick}
+            title={t.settingsLabel}
           >
-            ⚙ {t.settingsLabel}
+            <img
+              src={SettingsIcon}
+              alt={t.settingsLabel}
+              className="top-icon-img"
+            />
           </button>
           <button
             type="button"
-            className="top-btn"
+            className="top-btn top-btn-icon"
             onClick={handleLangClick}
+            title={t.langLabel}
           >
-            🌐 {t.langLabel}
+            <img
+              src={LANG_ICONS[lang]}
+              alt={t.langLabel}
+              className="top-icon-img"
+            />
           </button>
         </div>
       </div>
