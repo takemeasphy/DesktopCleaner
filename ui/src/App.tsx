@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import type { DesktopFile } from "./types";
 import { CircularProgress } from "./components/CircularProgress";
 import { MiniBarChart, type MiniBarDatum } from "./components/MiniBarChart";
+import {
+  WeeklyCleanlinessChart,
+  type WeeklyPoint,
+} from "./components/WeeklyCleanlinessChart";
 import { TEXTS, type Lang } from "./i18n";
 import "./App.css";
 import SettingsIcon from "./assets/Settings.png";
@@ -26,10 +30,14 @@ const LANG_ICONS: Record<Lang, string> = {
   en: EnIcon,
 };
 
+const MAX_FILES_FOR_100 = 50;
+
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
@@ -49,27 +57,65 @@ function getCategory(file: DesktopFile, lang: Lang): string {
   return t.catOther;
 }
 
+function normalizeDayIndex(jsDay: number): number {
+  return (jsDay + 6) % 7;
+}
+
 function App() {
   const [files, setFiles] = useState<DesktopFile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>("uk");
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [cleanupThreshold, setCleanupThreshold] = useState(30);
   const [ignoreList] = useState<string[]>([]);
+
   const [isScanning, setIsScanning] = useState(false);
   const [scanPanelVisible, setScanPanelVisible] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanFilesCount, setScanFilesCount] = useState(0);
   const [scanTotalSize, setScanTotalSize] = useState(0);
+
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyPoint[]>([]);
 
   const scanIntervalRef = useRef<number | null>(null);
 
   const t = TEXTS[lang];
 
+  const weeklyValues = weeklyStats.map((p) => p.value);
+  const averageScore = weeklyValues.length
+    ? Math.round(
+        weeklyValues.reduce((sum, v) => sum + v, 0) / weeklyValues.length
+      )
+    : 0;
+
+  const bestDayPoint =
+    weeklyStats.length > 0
+      ? weeklyStats.reduce((best, current) =>
+          current.value > best.value ? current : best
+        )
+      : null;
+
+  const worstDayPoint =
+    weeklyStats.length > 0
+      ? weeklyStats.reduce((worst, current) =>
+          current.value < worst.value ? current : worst
+        )
+      : null;
+
+  const totalDeletedFiles = 0;
+  const totalFreedBytes = 0;
+
   useEffect(() => {
     const bridge = window.desktopBridge;
-    if (bridge && bridge.filesUpdated && typeof bridge.filesUpdated.connect === "function") {
+    if (
+      bridge &&
+      bridge.filesUpdated &&
+      typeof bridge.filesUpdated.connect === "function"
+    ) {
       const handler = (payload: string) => {
         try {
           const parsed = JSON.parse(payload) as { files: DesktopFile[] };
@@ -81,6 +127,30 @@ function App() {
           );
           setScanTotalSize(total);
           setError(null);
+
+          const count = parsed.files.length;
+          const cleanlinessNow = count
+            ? Math.max(
+                0,
+                Math.min(
+                  100,
+                  100 - (count / MAX_FILES_FOR_100) * 100
+                )
+              )
+            : 100;
+
+          const todayIndex = normalizeDayIndex(new Date().getDay());
+
+          setWeeklyStats((prev) => {
+            const filtered = prev.filter(
+              (p) => p.dayIndex !== todayIndex
+            );
+            const next: WeeklyPoint[] = [
+              ...filtered,
+              { dayIndex: todayIndex, value: Math.round(cleanlinessNow) },
+            ];
+            return next.slice(-7);
+          });
         } catch {
           setError(t.errorFallback);
           setFiles([]);
@@ -112,6 +182,7 @@ function App() {
         scanIntervalRef.current = null;
       }
     }
+
     return () => {
       if (scanIntervalRef.current !== null) {
         window.clearInterval(scanIntervalRef.current);
@@ -122,11 +193,13 @@ function App() {
 
   const totalSize = files.reduce((sum, f) => sum + f.size_bytes, 0);
 
-  const maxFilesFor100 = 50;
   const cleanlinessPercent = files.length
     ? Math.max(
         0,
-        Math.min(100, 100 - (files.length / maxFilesFor100) * 100)
+        Math.min(
+          100,
+          100 - (files.length / MAX_FILES_FOR_100) * 100
+        )
       )
     : 100;
 
@@ -142,6 +215,7 @@ function App() {
 
   const openSettings = () => {
     setIsSettingsOpen(true);
+    setIsStatsOpen(false);
     setIsLangMenuOpen(false);
   };
 
@@ -182,6 +256,26 @@ function App() {
     setScanPanelVisible(false);
   };
 
+  const handleHistoryClick = () => {
+    alert("History screen will be here later ✨");
+  };
+
+  const handleStatsClick = () => {
+    setIsStatsOpen(true);
+    setIsSettingsOpen(false);
+    setIsLangMenuOpen(false);
+  };
+
+  const handleTrashClick = () => {
+    alert("Trash action will be implemented later ✨");
+  };
+
+  const weekdayLabels = t.statsWeekDaysShort;
+  const bestDayLabel =
+    bestDayPoint != null ? weekdayLabels[bestDayPoint.dayIndex] : "—";
+  const worstDayLabel =
+    worstDayPoint != null ? weekdayLabels[worstDayPoint.dayIndex] : "—";
+
   return (
     <div className="app">
       <div className="topbar">
@@ -198,6 +292,22 @@ function App() {
               alt={t.settingsLabel}
               className="top-icon-img"
             />
+          </button>
+
+          <button
+            type="button"
+            className="top-btn top-btn-text"
+            onClick={handleHistoryClick}
+          >
+            {t.historyLabel}
+          </button>
+
+          <button
+            type="button"
+            className="top-btn top-btn-text"
+            onClick={handleStatsClick}
+          >
+            {t.statsLabel}
           </button>
 
           <div className="lang-menu-wrapper">
@@ -249,7 +359,7 @@ function App() {
         </div>
       </div>
 
-      {!isSettingsOpen && (
+      {!isSettingsOpen && !isStatsOpen && (
         <>
           <section className="summary">
             <div className="summary-left">
@@ -297,7 +407,16 @@ function App() {
           </section>
 
           <section className="table-wrapper">
-            <h2>{t.tableTitle}</h2>
+            <div className="table-header">
+              <h2>{t.tableTitle}</h2>
+              <button
+                type="button"
+                className="table-trash-btn"
+                onClick={handleTrashClick}
+              >
+                🗑 {t.tableTrashLabel}
+              </button>
+            </div>
             <div className="table-scroll">
               <table>
                 <thead>
@@ -458,6 +577,105 @@ function App() {
         </div>
       )}
 
+      {isStatsOpen && (
+        <div className="settings-page">
+          <div className="settings-card">
+            <div className="settings-header-row">
+              <button
+                type="button"
+                className="settings-back-btn"
+                onClick={() => setIsStatsOpen(false)}
+              >
+                ←
+              </button>
+              <div className="settings-header-text">
+                <div className="settings-title">{t.statsLabel}</div>
+                <div className="settings-subtitle">{t.statsSubtitle}</div>
+              </div>
+            </div>
+
+            <div className="stats-main-row">
+              <div className="stats-chart-column">
+                <div className="summary-chart-title stats-chart-title">
+                  {t.statsChartTitle}
+                </div>
+                <div className="stats-chart-wrapper">
+                  <WeeklyCleanlinessChart
+                    data={weeklyStats}
+                    dayLabels={t.statsWeekDaysShort}
+                    emptyText={t.statsWeekEmpty}
+                  />
+                </div>
+              </div>
+
+              <div className="stats-metrics-column">
+                <div className="stats-metrics-grid">
+                  <div className="stats-metric-card">
+                    <div className="stats-metric-label">
+                      {t.statsMetricFilesDeleted}
+                    </div>
+                    <div className="stats-metric-value">
+                      {totalDeletedFiles}
+                    </div>
+                    <div className="stats-metric-sub">
+                      {t.statsMetricLifetimeSub}
+                    </div>
+                  </div>
+
+                  <div className="stats-metric-card">
+                    <div className="stats-metric-label">
+                      {t.statsMetricSpaceFreed}
+                    </div>
+                    <div className="stats-metric-value">
+                      {formatSize(totalFreedBytes)}
+                    </div>
+                    <div className="stats-metric-sub">
+                      {t.statsMetricSpaceSub}
+                    </div>
+                  </div>
+
+                  <div className="stats-metric-card">
+                    <div className="stats-metric-label">
+                      {t.statsMetricAvgScore}
+                    </div>
+                    <div className="stats-metric-value">
+                      {averageScore}%
+                    </div>
+                    <div className="stats-metric-sub">
+                      {t.statsMetricWeeklySub}
+                    </div>
+                  </div>
+
+                  <div className="stats-metric-card">
+                    <div className="stats-metric-label">
+                      {t.statsMetricBestDay}
+                    </div>
+                    <div className="stats-metric-value">
+                      {bestDayLabel}
+                    </div>
+                    <div className="stats-metric-sub">
+                      {bestDayPoint ? `${bestDayPoint.value}%` : ""}
+                    </div>
+                  </div>
+
+                  <div className="stats-metric-card">
+                    <div className="stats-metric-label">
+                      {t.statsMetricWorstDay}
+                    </div>
+                    <div className="stats-metric-value">
+                      {worstDayLabel}
+                    </div>
+                    <div className="stats-metric-sub">
+                      {worstDayPoint ? `${worstDayPoint.value}%` : ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {scanPanelVisible && (
         <div className="scan-overlay-backdrop">
           <div className="scan-overlay">
@@ -470,9 +688,7 @@ function App() {
               <div className="scan-overlay-subtitle">
                 {isScanning
                   ? t.scanDialogScanningSubtitle
-                  : t.scanDialogFilesLabel +
-                    ": " +
-                    scanFilesCount.toString()}
+                  : `${t.scanDialogFilesLabel}: ${scanFilesCount}`}
               </div>
             </div>
 

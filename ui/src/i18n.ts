@@ -46,6 +46,25 @@ export interface AppTexts {
   scanDialogDoneTitle: string;
   scanDialogFilesLabel: string;
   scanDialogClose: string;
+
+  historyLabel: string;
+  statsLabel: string;
+  tableTrashLabel: string;
+
+  statsSubtitle: string;
+  statsChartTitle: string;
+  statsMetricFilesDeleted: string;
+  statsMetricSpaceFreed: string;
+  statsMetricAvgScore: string;
+  statsMetricBestDay: string;
+  statsMetricWorstDay: string;
+  statsMetricLifetimeSub: string;
+  statsMetricSpaceSub: string;
+  statsMetricWeeklySub: string;
+
+  statsWeekDaysShort: string[];
+
+  statsWeekEmpty: string;
 }
 
 export const TEXTS: Record<Lang, AppTexts> = {
@@ -53,7 +72,7 @@ export const TEXTS: Record<Lang, AppTexts> = {
     langLabel: "УКР",
     filesOnDesktop: "Файлів на Desktop",
     totalSize: "Сумарний розмір",
-    cleanlinessScore: "Cleanliness score",
+    cleanlinessScore: "Показник чистоти",
     chartTitle: "Розподіл файлів за типами",
     tableTitle: "Список файлів",
     colName: "Назва",
@@ -98,13 +117,32 @@ export const TEXTS: Record<Lang, AppTexts> = {
     scanDialogDoneTitle: "Сканування завершено",
     scanDialogFilesLabel: "Файлів відскановано",
     scanDialogClose: "Закрити",
+
+    historyLabel: "Історія",
+    statsLabel: "Статистика",
+    tableTrashLabel: "До кошика",
+
+    statsSubtitle: "Коротка історія чистоти вашого робочого стола.",
+    statsChartTitle: "Чистота Desktop за останній тиждень",
+    statsMetricFilesDeleted: "Файлів видалено загалом",
+    statsMetricSpaceFreed: "Місця звільнено",
+    statsMetricAvgScore: "Середній показник чистоти",
+    statsMetricBestDay: "Найчистіший день",
+    statsMetricWorstDay: "Найзахаращеніший день",
+    statsMetricLifetimeSub: "За весь час роботи DesktopCleaner",
+    statsMetricSpaceSub: "Сумарно по всіх очищеннях",
+    statsMetricWeeklySub: "Середнє значення за тиждень",
+
+    statsWeekDaysShort: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"],
+    statsWeekEmpty: "Немає даних за тиждень — зробіть кілька сканувань.",
   },
+
   en: {
     langLabel: "EN",
     filesOnDesktop: "Files on Desktop",
     totalSize: "Total size",
     cleanlinessScore: "Cleanliness score",
-    chartTitle: "File types distribution",
+    chartTitle: "File type distribution",
     tableTitle: "Files list",
     colName: "Name",
     colExt: "Extension",
@@ -149,12 +187,31 @@ export const TEXTS: Record<Lang, AppTexts> = {
     scanDialogDoneTitle: "Scan complete",
     scanDialogFilesLabel: "Files scanned",
     scanDialogClose: "Close",
+
+    historyLabel: "History",
+    statsLabel: "Statistics",
+    tableTrashLabel: "Move to recycle bin",
+
+    statsSubtitle: "How clean your desktop was over the last week.",
+    statsChartTitle: "Desktop cleanliness over the last week",
+    statsMetricFilesDeleted: "Files deleted in total",
+    statsMetricSpaceFreed: "Space freed",
+    statsMetricAvgScore: "Average cleanliness score",
+    statsMetricBestDay: "Cleanest day",
+    statsMetricWorstDay: "Messiest day",
+    statsMetricLifetimeSub: "For the whole DesktopCleaner lifetime",
+    statsMetricSpaceSub: "Across all cleanups",
+    statsMetricWeeklySub: "Average value for this week",
+
+    statsWeekDaysShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    statsWeekEmpty: "No weekly stats yet — run a few scans to see the trend.",
   },
+
   ru: {
     langLabel: "РУС",
     filesOnDesktop: "Файлов на рабочем столе",
     totalSize: "Суммарный размер",
-    cleanlinessScore: "Cleanliness score",
+    cleanlinessScore: "Показатель чистоты",
     chartTitle: "Распределение файлов по типам",
     tableTitle: "Список файлов",
     colName: "Имя",
@@ -200,5 +257,23 @@ export const TEXTS: Record<Lang, AppTexts> = {
     scanDialogDoneTitle: "Сканирование завершено",
     scanDialogFilesLabel: "Файлов отсканировано",
     scanDialogClose: "Закрыть",
+
+    historyLabel: "История",
+    statsLabel: "Статистика",
+    tableTrashLabel: "В корзину",
+
+    statsSubtitle: "Краткая история чистоты вашего рабочего стола.",
+    statsChartTitle: "Чистота рабочего стола за последнюю неделю",
+    statsMetricFilesDeleted: "Файлов удалено всего",
+    statsMetricSpaceFreed: "Освобождено места",
+    statsMetricAvgScore: "Средний показатель чистоты",
+    statsMetricBestDay: "Самый чистый день",
+    statsMetricWorstDay: "Самый загруженный день",
+    statsMetricLifetimeSub: "За всё время работы DesktopCleaner",
+    statsMetricSpaceSub: "Суммарно по всем очисткам",
+    statsMetricWeeklySub: "Среднее значение за неделю",
+
+    statsWeekDaysShort: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+    statsWeekEmpty: "Пока нет данных за неделю — выполните несколько сканирований.",
   },
 };
