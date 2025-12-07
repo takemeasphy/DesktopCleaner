@@ -21,6 +21,25 @@ export interface AppTexts {
   catOther: string;
 
   settingsLabel: string;
+  settingsSubtitle: string;
+  settingsAutoLaunchTitle: string;
+  settingsAutoLaunchDesc: string;
+  settingsHiddenFilesTitle: string;
+  settingsHiddenFilesDesc: string;
+  settingsDryRunTitle: string;
+  settingsDryRunDesc: string;
+  settingsThresholdTitle: string;
+  settingsThresholdDesc: string;
+  settingsThresholdSuffix: string;
+  settingsCancel: string;
+  settingsSave: string;
+
+  startScanButton: string;
+
+  settingsIgnoreListTitle: string;
+  settingsIgnoreListDesc: string;
+  settingsIgnoreListButton: string;
+  settingsIgnoreListEmpty: string;
 }
 
 export const TEXTS: Record<Lang, AppTexts> = {
@@ -45,6 +64,28 @@ export const TEXTS: Record<Lang, AppTexts> = {
     catOther: "Інше",
 
     settingsLabel: "Налаштування",
+    settingsSubtitle: "Базові параметри поведінки DesktopCleaner",
+    settingsAutoLaunchTitle: "Автозапуск разом із системою",
+    settingsAutoLaunchDesc: "Запускати DesktopCleaner після входу в Windows",
+    settingsHiddenFilesTitle: "Враховувати приховані файли",
+    settingsHiddenFilesDesc: "Додавати системні та приховані файли до статистики",
+    settingsDryRunTitle: "Тільки аналіз, без видалення",
+    settingsDryRunDesc:
+      "Показувати рекомендації, але не видаляти нічого автоматично",
+    settingsThresholdTitle: "Поріг очищення за неактивністю",
+    settingsThresholdDesc:
+      "Після скількох днів без використання файл вважати сміттям",
+    settingsThresholdSuffix: "днів без використання",
+    settingsCancel: "Скасувати",
+    settingsSave: "Зберегти",
+
+    startScanButton: "Почати сканування",
+
+    settingsIgnoreListTitle: "Список недоторканих файлів",
+    settingsIgnoreListDesc:
+      "Файли й шляхи, які програма ніколи не буде чіпати під час очищення",
+    settingsIgnoreListButton: "Керувати списком",
+    settingsIgnoreListEmpty: "Список поки порожній",
   },
   en: {
     langLabel: "EN",
@@ -67,6 +108,29 @@ export const TEXTS: Record<Lang, AppTexts> = {
     catOther: "Other",
 
     settingsLabel: "Settings",
+    settingsSubtitle: "Core behavior of DesktopCleaner",
+    settingsAutoLaunchTitle: "Launch on system startup",
+    settingsAutoLaunchDesc: "Start DesktopCleaner after logging into Windows",
+    settingsHiddenFilesTitle: "Include hidden files",
+    settingsHiddenFilesDesc:
+      "Add system and hidden files to the statistics and analysis",
+    settingsDryRunTitle: "Analysis only, no deletion",
+    settingsDryRunDesc:
+      "Show recommendations but do not delete anything automatically",
+    settingsThresholdTitle: "Inactivity cleanup threshold",
+    settingsThresholdDesc:
+      "After how many days of inactivity a file is considered junk",
+    settingsThresholdSuffix: "days without use",
+    settingsCancel: "Cancel",
+    settingsSave: "Save",
+
+    startScanButton: "Start scan",
+
+    settingsIgnoreListTitle: "Protected files list",
+    settingsIgnoreListDesc:
+      "Files and paths that DesktopCleaner will never touch during cleanup",
+    settingsIgnoreListButton: "Manage list",
+    settingsIgnoreListEmpty: "List is empty for now",
   },
   ru: {
     langLabel: "РУС",
@@ -89,6 +153,29 @@ export const TEXTS: Record<Lang, AppTexts> = {
     catOther: "Другое",
 
     settingsLabel: "Настройки",
+    settingsSubtitle: "Базовые параметры работы DesktopCleaner",
+    settingsAutoLaunchTitle: "Автозапуск вместе с системой",
+    settingsAutoLaunchDesc: "Запускать DesktopCleaner после входа в Windows",
+    settingsHiddenFilesTitle: "Учитывать скрытые файлы",
+    settingsHiddenFilesDesc:
+      "Добавлять системные и скрытые файлы в статистику",
+    settingsDryRunTitle: "Только анализ, без удаления",
+    settingsDryRunDesc:
+      "Показывать рекомендации, но ничего не удалять автоматически",
+    settingsThresholdTitle: "Порог очистки по неактивности",
+    settingsThresholdDesc:
+      "Через сколько дней без использования считать файл мусором",
+    settingsThresholdSuffix: "дней без использования",
+    settingsCancel: "Отмена",
+    settingsSave: "Сохранить",
+
+    startScanButton: "Начать сканирование",
+
+    settingsIgnoreListTitle: "Список неприкасаемых файлов",
+    settingsIgnoreListDesc:
+      "Файлы и пути, которые программа никогда не будет трогать при очистке",
+    settingsIgnoreListButton: "Управлять списком",
+    settingsIgnoreListEmpty: "Список пока пуст",
   },
 };
 
