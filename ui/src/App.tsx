@@ -128,7 +128,7 @@ function App() {
 
       <section className="summary">
         <div className="summary-left">
-          <CircularProgress value={Math.round(cleanlinessPercent)} />
+          <CircularProgress value={Math.round(cleanlinessPercent)} size={180} />
         </div>
 
         <div className="summary-right">
