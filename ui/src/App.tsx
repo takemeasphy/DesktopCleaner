@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { DesktopFile } from "./types";
 import { CircularProgress } from "./components/CircularProgress";
 import { MiniBarChart, type MiniBarDatum } from "./components/MiniBarChart";
-import { TEXTS, nextLang, type Lang } from "./i18n";
+import { TEXTS, type Lang } from "./i18n";
 import "./App.css";
 import SettingsIcon from "./assets/Settings.png";
 import UkIcon from "./assets/UKR.png";
@@ -61,6 +61,7 @@ function App() {
   const [scanProgress, setScanProgress] = useState(0);
   const [scanFilesCount, setScanFilesCount] = useState(0);
   const [scanTotalSize, setScanTotalSize] = useState(0);
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
   const scanIntervalRef = useRef<number | null>(null);
 
@@ -141,14 +142,20 @@ function App() {
 
   const openSettings = () => {
     setIsSettingsOpen(true);
+    setIsLangMenuOpen(false);
   };
 
   const closeSettings = () => {
     setIsSettingsOpen(false);
   };
 
-  const handleLangClick = () => {
-    setLang((prev) => nextLang(prev));
+  const handleLangButtonClick = () => {
+    setIsLangMenuOpen((prev) => !prev);
+  };
+
+  const handleSelectLang = (newLang: Lang) => {
+    setLang(newLang);
+    setIsLangMenuOpen(false);
   };
 
   const handleThresholdChange = (value: number) => {
@@ -164,6 +171,7 @@ function App() {
       setScanProgress(0);
       setScanPanelVisible(true);
       setIsScanning(true);
+      setIsLangMenuOpen(false);
       bridge.scanDesktop();
     } else {
       setError("Desktop bridge is not available");
@@ -191,18 +199,53 @@ function App() {
               className="top-icon-img"
             />
           </button>
-          <button
-            type="button"
-            className="top-btn top-btn-icon"
-            onClick={handleLangClick}
-            title={t.langLabel}
-          >
-            <img
-              src={LANG_ICONS[lang]}
-              alt={t.langLabel}
-              className="top-icon-img"
-            />
-          </button>
+
+          <div className="lang-menu-wrapper">
+            <button
+              type="button"
+              className="top-btn top-btn-icon"
+              onClick={handleLangButtonClick}
+              title={t.langLabel}
+            >
+              <img
+                src={LANG_ICONS[lang]}
+                alt={t.langLabel}
+                className="top-icon-img"
+              />
+            </button>
+
+            {isLangMenuOpen && (
+              <div className="lang-menu">
+                <button
+                  type="button"
+                  className={
+                    "lang-menu-item" + (lang === "uk" ? " active" : "")
+                  }
+                  onClick={() => handleSelectLang("uk")}
+                >
+                  Українська
+                </button>
+                <button
+                  type="button"
+                  className={
+                    "lang-menu-item" + (lang === "en" ? " active" : "")
+                  }
+                  onClick={() => handleSelectLang("en")}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  className={
+                    "lang-menu-item" + (lang === "ru" ? " active" : "")
+                  }
+                  onClick={() => handleSelectLang("ru")}
+                >
+                  Русский
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
