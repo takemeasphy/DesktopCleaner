@@ -11,6 +11,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .topbar {
@@ -26,22 +28,22 @@
 
 .topbar-buttons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .top-btn {
   border-radius: 999px;
-  padding: 6px 12px;
   border: 1px solid #e5e7eb;
   background: #ffffff;
   font-size: 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   color: #111827;
   transition: background 0.15s ease, box-shadow 0.15s ease,
     transform 0.05s ease;
+  padding: 0;
 }
 
 .top-btn:hover {
@@ -51,6 +53,17 @@
 
 .top-btn:active {
   transform: translateY(1px);
+}
+
+.top-btn-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.top-icon-img {
+  width: 26px;
+  height: 26px;
+  display: block;
 }
 
 .summary {
@@ -168,7 +181,7 @@
 }
 
 .table-scroll {
-  max-height: 260px; 
+  max-height: 260px;
   overflow-y: auto;
 }
 

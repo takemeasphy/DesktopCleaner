@@ -14,9 +14,10 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("DesktopCleaner")
-        self.resize(1100, 720)
+        self.resize(1400, 900)
 
         view = QWebEngineView(self)
+        view.setZoomFactor(1.1)
 
         project_root = Path(__file__).resolve().parent.parent  
         dist_dir = project_root / "ui" / "dist"
