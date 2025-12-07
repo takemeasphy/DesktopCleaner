@@ -2,9 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <title>DesktopCleaner</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ui</title>
+
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+      window.desktopBridge = undefined;
+      if (window.qt && window.qt.webChannelTransport) {
+        new QWebChannel(window.qt.webChannelTransport, function (channel) {
+          window.desktopBridge = channel.objects.desktopBridge;
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

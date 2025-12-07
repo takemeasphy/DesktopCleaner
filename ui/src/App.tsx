@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DesktopFile } from "./types";
-import { mockFiles } from "./mockData";
 import { CircularProgress } from "./components/CircularProgress";
 import { MiniBarChart, type MiniBarDatum } from "./components/MiniBarChart";
 import { TEXTS, nextLang, type Lang } from "./i18n";
@@ -9,6 +8,17 @@ import SettingsIcon from "./assets/Settings.png";
 import UkIcon from "./assets/UKR.png";
 import RuIcon from "./assets/RUS.png";
 import EnIcon from "./assets/ENG.png";
+
+declare global {
+  interface Window {
+    desktopBridge?: {
+      scanDesktop: () => void;
+      filesUpdated?: {
+        connect: (cb: (payload: string) => void) => void;
+      };
+    };
+  }
+}
 
 const LANG_ICONS: Record<Lang, string> = {
   uk: UkIcon,
@@ -40,44 +50,84 @@ function getCategory(file: DesktopFile, lang: Lang): string {
 }
 
 function App() {
-  const [files, setFiles] = useState<DesktopFile[] | null>(null);
+  const [files, setFiles] = useState<DesktopFile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>("uk");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [cleanupThreshold, setCleanupThreshold] = useState(30);
   const [ignoreList] = useState<string[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanPanelVisible, setScanPanelVisible] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanFilesCount, setScanFilesCount] = useState(0);
+  const [scanTotalSize, setScanTotalSize] = useState(0);
 
-  const isFileProtocol = window.location.protocol === "file:";
+  const scanIntervalRef = useRef<number | null>(null);
+
   const t = TEXTS[lang];
 
   useEffect(() => {
-    if (isFileProtocol) {
-      fetch("files.json")
-        .then((res) => res.json())
-        .then((data) => {
-          setFiles(data.files as DesktopFile[]);
-        })
-        .catch((err) => {
-          console.error("Failed to load files.json", err);
-          setError(TEXTS.uk.errorFallback);
-          setFiles(mockFiles);
-        });
+    const bridge = window.desktopBridge;
+    if (bridge && bridge.filesUpdated && typeof bridge.filesUpdated.connect === "function") {
+      const handler = (payload: string) => {
+        try {
+          const parsed = JSON.parse(payload) as { files: DesktopFile[] };
+          setFiles(parsed.files);
+          setScanFilesCount(parsed.files.length);
+          const total = parsed.files.reduce(
+            (sum, f) => sum + f.size_bytes,
+            0
+          );
+          setScanTotalSize(total);
+          setError(null);
+        } catch {
+          setError(t.errorFallback);
+          setFiles([]);
+          setScanFilesCount(0);
+          setScanTotalSize(0);
+        }
+        setScanProgress(100);
+        setIsScanning(false);
+      };
+      bridge.filesUpdated.connect(handler);
     } else {
-      setFiles(mockFiles);
+      setError("Desktop bridge is not available");
     }
-  }, [isFileProtocol]);
+  }, [t.errorFallback]);
 
-  if (!files) {
-    return <div className="app">{t.loading}</div>;
-  }
+  useEffect(() => {
+    if (isScanning) {
+      if (scanIntervalRef.current !== null) return;
+      const id = window.setInterval(() => {
+        setScanProgress((prev) => {
+          if (prev >= 90) return prev;
+          return prev + 2;
+        });
+      }, 150);
+      scanIntervalRef.current = id;
+    } else {
+      if (scanIntervalRef.current !== null) {
+        window.clearInterval(scanIntervalRef.current);
+        scanIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (scanIntervalRef.current !== null) {
+        window.clearInterval(scanIntervalRef.current);
+        scanIntervalRef.current = null;
+      }
+    };
+  }, [isScanning]);
 
   const totalSize = files.reduce((sum, f) => sum + f.size_bytes, 0);
 
   const maxFilesFor100 = 50;
-  const cleanlinessPercent = Math.max(
-    0,
-    Math.min(100, 100 - (files.length / maxFilesFor100) * 100)
-  );
+  const cleanlinessPercent = files.length
+    ? Math.max(
+        0,
+        Math.min(100, 100 - (files.length / maxFilesFor100) * 100)
+      )
+    : 100;
 
   const categoryMap = new Map<string, number>();
   for (const f of files) {
@@ -105,7 +155,24 @@ function App() {
     setCleanupThreshold(value);
   };
 
-  const handleStartScan = () => {};
+  const handleStartScan = () => {
+    const bridge = window.desktopBridge;
+    if (bridge && typeof bridge.scanDesktop === "function") {
+      setError(null);
+      setScanFilesCount(0);
+      setScanTotalSize(0);
+      setScanProgress(0);
+      setScanPanelVisible(true);
+      setIsScanning(true);
+      bridge.scanDesktop();
+    } else {
+      setError("Desktop bridge is not available");
+    }
+  };
+
+  const handleCloseScanPanel = () => {
+    setScanPanelVisible(false);
+  };
 
   return (
     <div className="app">
@@ -180,8 +247,9 @@ function App() {
               type="button"
               className="primary-action-btn"
               onClick={handleStartScan}
+              disabled={isScanning}
             >
-              {t.startScanButton}
+              {isScanning ? `${t.startScanButton}...` : t.startScanButton}
             </button>
           </section>
 
@@ -342,6 +410,64 @@ function App() {
               >
                 {t.settingsSave}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scanPanelVisible && (
+        <div className="scan-overlay-backdrop">
+          <div className="scan-overlay">
+            <div className="scan-overlay-header">
+              <div className="scan-overlay-title">
+                {isScanning
+                  ? t.scanDialogScanningTitle
+                  : t.scanDialogDoneTitle}
+              </div>
+              <div className="scan-overlay-subtitle">
+                {isScanning
+                  ? t.scanDialogScanningSubtitle
+                  : t.scanDialogFilesLabel +
+                    ": " +
+                    scanFilesCount.toString()}
+              </div>
+            </div>
+
+            <div className="scan-overlay-progress-block">
+              <div className="scan-overlay-progress-label">
+                {Math.round(scanProgress)}%
+              </div>
+              <div className="scan-overlay-progress-track">
+                <div
+                  className="scan-overlay-progress-bar"
+                  style={{ width: `${scanProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {!isScanning && (
+              <div className="scan-overlay-stats">
+                <div className="scan-overlay-stat-row">
+                  <span>{t.scanDialogFilesLabel}</span>
+                  <span>{scanFilesCount}</span>
+                </div>
+                <div className="scan-overlay-stat-row">
+                  <span>{t.totalSize}</span>
+                  <span>{formatSize(scanTotalSize)}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="scan-overlay-footer">
+              {!isScanning && (
+                <button
+                  type="button"
+                  className="scan-overlay-close-btn"
+                  onClick={handleCloseScanPanel}
+                >
+                  {t.scanDialogClose}
+                </button>
+              )}
             </div>
           </div>
         </div>
