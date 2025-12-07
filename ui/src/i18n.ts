@@ -40,6 +40,12 @@ export interface AppTexts {
   settingsIgnoreListDesc: string;
   settingsIgnoreListButton: string;
   settingsIgnoreListEmpty: string;
+
+  scanDialogScanningTitle: string;
+  scanDialogScanningSubtitle: string;
+  scanDialogDoneTitle: string;
+  scanDialogFilesLabel: string;
+  scanDialogClose: string;
 }
 
 export const TEXTS: Record<Lang, AppTexts> = {
@@ -56,7 +62,7 @@ export const TEXTS: Record<Lang, AppTexts> = {
     colModified: "Остання зміна",
     colAccess: "Останній доступ",
     loading: "Завантаження...",
-    errorFallback: "Не вдалося завантажити дані, показую моки.",
+    errorFallback: "Не вдалося завантажити дані.",
 
     catImages: "Зображення",
     catDocs: "Документи",
@@ -86,6 +92,12 @@ export const TEXTS: Record<Lang, AppTexts> = {
       "Файли й шляхи, які програма ніколи не буде чіпати під час очищення",
     settingsIgnoreListButton: "Керувати списком",
     settingsIgnoreListEmpty: "Список поки порожній",
+
+    scanDialogScanningTitle: "Сканування робочого стола",
+    scanDialogScanningSubtitle: "Аналізуємо файли та активність...",
+    scanDialogDoneTitle: "Сканування завершено",
+    scanDialogFilesLabel: "Файлів відскановано",
+    scanDialogClose: "Закрити",
   },
   en: {
     langLabel: "EN",
@@ -100,7 +112,7 @@ export const TEXTS: Record<Lang, AppTexts> = {
     colModified: "Last modified",
     colAccess: "Last accessed",
     loading: "Loading...",
-    errorFallback: "Failed to load data, showing mocks.",
+    errorFallback: "Failed to load data.",
 
     catImages: "Images",
     catDocs: "Documents",
@@ -131,6 +143,12 @@ export const TEXTS: Record<Lang, AppTexts> = {
       "Files and paths that DesktopCleaner will never touch during cleanup",
     settingsIgnoreListButton: "Manage list",
     settingsIgnoreListEmpty: "List is empty for now",
+
+    scanDialogScanningTitle: "Desktop scanning",
+    scanDialogScanningSubtitle: "Analyzing files and activity...",
+    scanDialogDoneTitle: "Scan complete",
+    scanDialogFilesLabel: "Files scanned",
+    scanDialogClose: "Close",
   },
   ru: {
     langLabel: "РУС",
@@ -145,7 +163,7 @@ export const TEXTS: Record<Lang, AppTexts> = {
     colModified: "Последнее изменение",
     colAccess: "Последний доступ",
     loading: "Загрузка...",
-    errorFallback: "Не удалось загрузить данные, показываю заглушку.",
+    errorFallback: "Не удалось загрузить данные.",
 
     catImages: "Изображения",
     catDocs: "Документы",
@@ -176,6 +194,12 @@ export const TEXTS: Record<Lang, AppTexts> = {
       "Файлы и пути, которые программа никогда не будет трогать при очистке",
     settingsIgnoreListButton: "Управлять списком",
     settingsIgnoreListEmpty: "Список пока пуст",
+
+    scanDialogScanningTitle: "Сканирование рабочего стола",
+    scanDialogScanningSubtitle: "Анализируем файлы и активность...",
+    scanDialogDoneTitle: "Сканирование завершено",
+    scanDialogFilesLabel: "Файлов отсканировано",
+    scanDialogClose: "Закрыть",
   },
 };
 
