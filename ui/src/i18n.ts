@@ -202,9 +202,3 @@ export const TEXTS: Record<Lang, AppTexts> = {
     scanDialogClose: "Закрыть",
   },
 };
-
-export function nextLang(current: Lang): Lang {
-  if (current === "uk") return "en";
-  if (current === "en") return "ru";
-  return "uk";
-}
