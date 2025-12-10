@@ -2,16 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import type { DesktopFile } from "./types";
 import { CircularProgress } from "./components/CircularProgress";
 import { MiniBarChart, type MiniBarDatum } from "./components/MiniBarChart";
-import {
-  WeeklyCleanlinessChart,
-  type WeeklyPoint,
-} from "./components/WeeklyCleanlinessChart";
 import { TEXTS, type Lang } from "./i18n";
 import "./App.css";
 import SettingsIcon from "./assets/Settings.png";
 import UkIcon from "./assets/UKR.png";
 import RuIcon from "./assets/RUS.png";
 import EnIcon from "./assets/ENG.png";
+import { SettingsPage } from "./tabs/SettingsPage";
+import { StatsPage } from "./tabs/StatsPage";
+import type { WeeklyPoint } from "./components/WeeklyCleanlinessChart";
 
 declare global {
   interface Window {
@@ -85,27 +84,6 @@ function App() {
 
   const t = TEXTS[lang];
 
-  const weeklyValues = weeklyStats.map((p) => p.value);
-  const averageScore = weeklyValues.length
-    ? Math.round(
-        weeklyValues.reduce((sum, v) => sum + v, 0) / weeklyValues.length
-      )
-    : 0;
-
-  const bestDayPoint =
-    weeklyStats.length > 0
-      ? weeklyStats.reduce((best, current) =>
-          current.value > best.value ? current : best
-        )
-      : null;
-
-  const worstDayPoint =
-    weeklyStats.length > 0
-      ? weeklyStats.reduce((worst, current) =>
-          current.value < worst.value ? current : worst
-        )
-      : null;
-
   const totalDeletedFiles = 0;
   const totalFreedBytes = 0;
 
@@ -131,12 +109,12 @@ function App() {
           const count = parsed.files.length;
           const cleanlinessNow = count
             ? Math.max(
-                0,
-                Math.min(
-                  100,
-                  100 - (count / MAX_FILES_FOR_100) * 100
-                )
+              0,
+              Math.min(
+                100,
+                100 - (count / MAX_FILES_FOR_100) * 100
               )
+            )
             : 100;
 
           const todayIndex = normalizeDayIndex(new Date().getDay());
@@ -195,12 +173,12 @@ function App() {
 
   const cleanlinessPercent = files.length
     ? Math.max(
-        0,
-        Math.min(
-          100,
-          100 - (files.length / MAX_FILES_FOR_100) * 100
-        )
+      0,
+      Math.min(
+        100,
+        100 - (files.length / MAX_FILES_FOR_100) * 100
       )
+    )
     : 100;
 
   const categoryMap = new Map<string, number>();
@@ -256,10 +234,6 @@ function App() {
     setScanPanelVisible(false);
   };
 
-  const handleHistoryClick = () => {
-    alert("History screen will be here later ✨");
-  };
-
   const handleStatsClick = () => {
     setIsStatsOpen(true);
     setIsSettingsOpen(false);
@@ -269,12 +243,6 @@ function App() {
   const handleTrashClick = () => {
     alert("Trash action will be implemented later ✨");
   };
-
-  const weekdayLabels = t.statsWeekDaysShort;
-  const bestDayLabel =
-    bestDayPoint != null ? weekdayLabels[bestDayPoint.dayIndex] : "—";
-  const worstDayLabel =
-    worstDayPoint != null ? weekdayLabels[worstDayPoint.dayIndex] : "—";
 
   return (
     <div className="app">
@@ -292,14 +260,6 @@ function App() {
               alt={t.settingsLabel}
               className="top-icon-img"
             />
-          </button>
-
-          <button
-            type="button"
-            className="top-btn top-btn-text"
-            onClick={handleHistoryClick}
-          >
-            {t.historyLabel}
           </button>
 
           <button
@@ -446,235 +406,26 @@ function App() {
       )}
 
       {isSettingsOpen && (
-        <div className="settings-page">
-          <div className="settings-card">
-            <div className="settings-header-row">
-              <button
-                type="button"
-                className="settings-back-btn"
-                onClick={closeSettings}
-              >
-                ←
-              </button>
-              <div className="settings-header-text">
-                <div className="settings-title">{t.settingsLabel}</div>
-                <div className="settings-subtitle">{t.settingsSubtitle}</div>
-              </div>
-            </div>
-
-            <div className="settings-section settings-main-row">
-              <div className="settings-column">
-                <label className="settings-row">
-                  <input type="checkbox" className="settings-checkbox" />
-                  <div className="settings-row-text">
-                    <div className="settings-row-title">
-                      {t.settingsAutoLaunchTitle}
-                    </div>
-                    <div className="settings-row-desc">
-                      {t.settingsAutoLaunchDesc}
-                    </div>
-                  </div>
-                </label>
-
-                <label className="settings-row">
-                  <input type="checkbox" className="settings-checkbox" />
-                  <div className="settings-row-text">
-                    <div className="settings-row-title">
-                      {t.settingsHiddenFilesTitle}
-                    </div>
-                    <div className="settings-row-desc">
-                      {t.settingsHiddenFilesDesc}
-                    </div>
-                  </div>
-                </label>
-
-                <label className="settings-row">
-                  <input type="checkbox" className="settings-checkbox" />
-                  <div className="settings-row-text">
-                    <div className="settings-row-title">
-                      {t.settingsDryRunTitle}
-                    </div>
-                    <div className="settings-row-desc">
-                      {t.settingsDryRunDesc}
-                    </div>
-                  </div>
-                </label>
-              </div>
-
-              <div className="settings-ignore-card">
-                <div className="settings-ignore-header">
-                  <div className="settings-row-title">
-                    {t.settingsIgnoreListTitle}
-                  </div>
-                  <div className="settings-row-desc">
-                    {t.settingsIgnoreListDesc}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="settings-btn-secondary settings-ignore-button"
-                >
-                  {t.settingsIgnoreListButton}
-                </button>
-                <div className="settings-ignore-list">
-                  {ignoreList.length === 0 ? (
-                    <div className="settings-ignore-item settings-ignore-empty">
-                      {t.settingsIgnoreListEmpty}
-                    </div>
-                  ) : (
-                    ignoreList.slice(0, 4).map((item) => (
-                      <div key={item} className="settings-ignore-item">
-                        {item}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <div className="settings-row-text">
-                <div className="settings-row-title">
-                  {t.settingsThresholdTitle}
-                </div>
-                <div className="settings-row-desc">
-                  {t.settingsThresholdDesc}
-                </div>
-              </div>
-              <div className="settings-range-wrapper">
-                <input
-                  type="range"
-                  min={7}
-                  max={90}
-                  value={cleanupThreshold}
-                  onChange={(e) =>
-                    handleThresholdChange(Number(e.target.value))
-                  }
-                />
-                <div className="settings-range-value">
-                  {cleanupThreshold} {t.settingsThresholdSuffix}
-                </div>
-              </div>
-            </div>
-
-            <div className="settings-footer">
-              <button
-                type="button"
-                className="settings-btn-secondary"
-                onClick={closeSettings}
-              >
-                {t.settingsCancel}
-              </button>
-              <button
-                type="button"
-                className="settings-btn-primary"
-                onClick={closeSettings}
-              >
-                {t.settingsSave}
-              </button>
-            </div>
-          </div>
-        </div>
+        <SettingsPage
+          t={t}
+          ignoreList={ignoreList}
+          cleanupThreshold={cleanupThreshold}
+          onChangeThreshold={handleThresholdChange}
+          onClose={closeSettings}
+        />
       )}
+
 
       {isStatsOpen && (
-        <div className="settings-page">
-          <div className="settings-card">
-            <div className="settings-header-row">
-              <button
-                type="button"
-                className="settings-back-btn"
-                onClick={() => setIsStatsOpen(false)}
-              >
-                ←
-              </button>
-              <div className="settings-header-text">
-                <div className="settings-title">{t.statsLabel}</div>
-                <div className="settings-subtitle">{t.statsSubtitle}</div>
-              </div>
-            </div>
-
-            <div className="stats-main-row">
-              <div className="stats-chart-column">
-                <div className="summary-chart-title stats-chart-title">
-                  {t.statsChartTitle}
-                </div>
-                <div className="stats-chart-wrapper">
-                  <WeeklyCleanlinessChart
-                    data={weeklyStats}
-                    dayLabels={t.statsWeekDaysShort}
-                    emptyText={t.statsWeekEmpty}
-                  />
-                </div>
-              </div>
-
-              <div className="stats-metrics-column">
-                <div className="stats-metrics-grid">
-                  <div className="stats-metric-card">
-                    <div className="stats-metric-label">
-                      {t.statsMetricFilesDeleted}
-                    </div>
-                    <div className="stats-metric-value">
-                      {totalDeletedFiles}
-                    </div>
-                    <div className="stats-metric-sub">
-                      {t.statsMetricLifetimeSub}
-                    </div>
-                  </div>
-
-                  <div className="stats-metric-card">
-                    <div className="stats-metric-label">
-                      {t.statsMetricSpaceFreed}
-                    </div>
-                    <div className="stats-metric-value">
-                      {formatSize(totalFreedBytes)}
-                    </div>
-                    <div className="stats-metric-sub">
-                      {t.statsMetricSpaceSub}
-                    </div>
-                  </div>
-
-                  <div className="stats-metric-card">
-                    <div className="stats-metric-label">
-                      {t.statsMetricAvgScore}
-                    </div>
-                    <div className="stats-metric-value">
-                      {averageScore}%
-                    </div>
-                    <div className="stats-metric-sub">
-                      {t.statsMetricWeeklySub}
-                    </div>
-                  </div>
-
-                  <div className="stats-metric-card">
-                    <div className="stats-metric-label">
-                      {t.statsMetricBestDay}
-                    </div>
-                    <div className="stats-metric-value">
-                      {bestDayLabel}
-                    </div>
-                    <div className="stats-metric-sub">
-                      {bestDayPoint ? `${bestDayPoint.value}%` : ""}
-                    </div>
-                  </div>
-
-                  <div className="stats-metric-card">
-                    <div className="stats-metric-label">
-                      {t.statsMetricWorstDay}
-                    </div>
-                    <div className="stats-metric-value">
-                      {worstDayLabel}
-                    </div>
-                    <div className="stats-metric-sub">
-                      {worstDayPoint ? `${worstDayPoint.value}%` : ""}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <StatsPage
+          t={t}
+          weeklyStats={weeklyStats}
+          totalDeletedFiles={totalDeletedFiles}
+          totalFreedBytes={totalFreedBytes}
+          onClose={() => setIsStatsOpen(false)}
+        />
       )}
+
 
       {scanPanelVisible && (
         <div className="scan-overlay-backdrop">
