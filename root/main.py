@@ -11,7 +11,7 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtGui import QGuiApplication
 
 from scanner import scan_desktop
-
+from autorun import setup_autorun_status
 
 class DesktopBridge(QObject):
     filesUpdated = Signal(str)
@@ -21,6 +21,10 @@ class DesktopBridge(QObject):
         files = scan_desktop()
         payload = json.dumps({"files": files}, ensure_ascii=False, default=str)
         self.filesUpdated.emit(payload)
+    
+    @Slot(bool, result=str)
+    def setAutorun(self, enabled: bool) -> str:
+        return setup_autorun_status(enable_autorun=enabled)
 
 
 class MainWindow(QMainWindow):
