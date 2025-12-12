@@ -1,4 +1,5 @@
 import React from "react";
+import "./css-styles/SettingsPage.css";
 
 interface SettingsPageProps {
   t: any;

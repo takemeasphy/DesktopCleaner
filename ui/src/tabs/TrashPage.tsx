@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import type { DesktopFile } from "../types";
 import type { AppTexts } from "../i18n";
 import { MiniBarChart, type MiniBarDatum } from "../components/MiniBarChart";
+import "./css-styles/TrashPage.css";
 
 export type TrashItem = {
   id: string;
