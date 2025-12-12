@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState } from "react";
+
 import type { DesktopFile } from "./types";
 import { CircularProgress } from "./components/CircularProgress";
 import { MiniBarChart, type MiniBarDatum } from "./components/MiniBarChart";
+import type { WeeklyPoint } from "./components/WeeklyCleanlinessChart";
+
 import { TEXTS, type Lang } from "./i18n";
+
 import "./App.css";
 import SettingsIcon from "./assets/Settings.png";
 import UkIcon from "./assets/UKR.png";
 import RuIcon from "./assets/RUS.png";
 import EnIcon from "./assets/ENG.png";
+import StatsIcon from "./assets/Statistics.png";
+import TrashCanIcon from "./assets/TrashCan.png";
+import DeleteIcon from "./assets/DELETE.png";
+
 import { SettingsPage } from "./tabs/SettingsPage";
 import { StatsPage } from "./tabs/StatsPage";
-import type { WeeklyPoint } from "./components/WeeklyCleanlinessChart";
+import { TrashPage } from "./tabs/TrashPage";
 
 declare global {
   interface Window {
@@ -30,6 +38,12 @@ const LANG_ICONS: Record<Lang, string> = {
 };
 
 const MAX_FILES_FOR_100 = 50;
+
+type TrashEntry = {
+  id: string;
+  file: DesktopFile;
+  addedAt: string;
+};
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -67,6 +81,7 @@ function App() {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [cleanupThreshold, setCleanupThreshold] = useState(30);
   const [ignoreList] = useState<string[]>([]);
 
@@ -79,6 +94,10 @@ function App() {
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
   const [weeklyStats, setWeeklyStats] = useState<WeeklyPoint[]>([]);
+  const [trashItems, setTrashItems] = useState<TrashEntry[]>([]);
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const scanIntervalRef = useRef<number | null>(null);
 
@@ -98,6 +117,7 @@ function App() {
         try {
           const parsed = JSON.parse(payload) as { files: DesktopFile[] };
           setFiles(parsed.files);
+          setSelectedPaths(new Set());
           setScanFilesCount(parsed.files.length);
           const total = parsed.files.reduce(
             (sum, f) => sum + f.size_bytes,
@@ -109,12 +129,12 @@ function App() {
           const count = parsed.files.length;
           const cleanlinessNow = count
             ? Math.max(
-              0,
-              Math.min(
-                100,
-                100 - (count / MAX_FILES_FOR_100) * 100
+                0,
+                Math.min(
+                  100,
+                  100 - (count / MAX_FILES_FOR_100) * 100
+                )
               )
-            )
             : 100;
 
           const todayIndex = normalizeDayIndex(new Date().getDay());
@@ -132,6 +152,7 @@ function App() {
         } catch {
           setError(t.errorFallback);
           setFiles([]);
+          setSelectedPaths(new Set());
           setScanFilesCount(0);
           setScanTotalSize(0);
         }
@@ -173,12 +194,12 @@ function App() {
 
   const cleanlinessPercent = files.length
     ? Math.max(
-      0,
-      Math.min(
-        100,
-        100 - (files.length / MAX_FILES_FOR_100) * 100
+        0,
+        Math.min(
+          100,
+          100 - (files.length / MAX_FILES_FOR_100) * 100
+        )
       )
-    )
     : 100;
 
   const categoryMap = new Map<string, number>();
@@ -194,6 +215,7 @@ function App() {
   const openSettings = () => {
     setIsSettingsOpen(true);
     setIsStatsOpen(false);
+    setIsTrashOpen(false);
     setIsLangMenuOpen(false);
   };
 
@@ -237,11 +259,89 @@ function App() {
   const handleStatsClick = () => {
     setIsStatsOpen(true);
     setIsSettingsOpen(false);
+    setIsTrashOpen(false);
     setIsLangMenuOpen(false);
   };
 
-  const handleTrashClick = () => {
-    alert("Trash action will be implemented later ✨");
+  const handleOpenTrashPage = () => {
+    setIsTrashOpen(true);
+    setIsSettingsOpen(false);
+    setIsStatsOpen(false);
+    setIsLangMenuOpen(false);
+  };
+
+  const toggleFileSelection = (path: string) => {
+    setSelectedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  };
+
+  const allSelected = files.length > 0 && selectedPaths.size === files.length;
+
+  const toggleSelectAll = () => {
+    setSelectedPaths((prev) => {
+      if (files.length === 0) return new Set();
+      if (prev.size === files.length) {
+        return new Set();
+      }
+      const next = new Set<string>();
+      for (const f of files) {
+        next.add(f.path);
+      }
+      return next;
+    });
+  };
+
+  const movePathsToTrash = (paths: string[]) => {
+    if (paths.length === 0) return;
+
+    const now = new Date().toISOString();
+
+    setTrashItems((prev) => {
+      const selectedFiles = files.filter((f) => paths.includes(f.path));
+      const newEntries: TrashEntry[] = selectedFiles.map((file, index) => ({
+        id: `${file.path}-${now}-${index}`,
+        file,
+        addedAt: now,
+      }));
+      return [...newEntries, ...prev];
+    });
+
+    setFiles((prev) => prev.filter((f) => !paths.includes(f.path)));
+
+    setSelectedPaths((prev) => {
+      const next = new Set(prev);
+      paths.forEach((p) => next.delete(p));
+      return next;
+    });
+  };
+
+  const handleMoveSelectedToTrash = () => {
+    if (selectedPaths.size === 0) return;
+    movePathsToTrash(Array.from(selectedPaths));
+  };
+
+  const handleRestoreFromTrash = (id: string) => {
+    setTrashItems((prev) => {
+      const entry = prev.find((i) => i.id === id);
+      if (!entry) return prev;
+      setFiles((filesPrev) => [entry.file, ...filesPrev]);
+      return prev.filter((i) => i.id !== id);
+    });
+  };
+
+  const handlePermanentDelete = (id: string) => {
+    setTrashItems((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const handleClearTrash = () => {
+    setTrashItems([]);
   };
 
   return (
@@ -264,10 +364,15 @@ function App() {
 
           <button
             type="button"
-            className="top-btn top-btn-text"
+            className="top-btn top-btn-icon"
             onClick={handleStatsClick}
+            title={t.statsLabel}
           >
-            {t.statsLabel}
+            <img
+              src={StatsIcon}
+              alt={t.statsLabel}
+              className="top-icon-img"
+            />
           </button>
 
           <div className="lang-menu-wrapper">
@@ -319,7 +424,7 @@ function App() {
         </div>
       </div>
 
-      {!isSettingsOpen && !isStatsOpen && (
+      {!isSettingsOpen && !isStatsOpen && !isTrashOpen && (
         <>
           <section className="summary">
             <div className="summary-left">
@@ -369,18 +474,45 @@ function App() {
           <section className="table-wrapper">
             <div className="table-header">
               <h2>{t.tableTitle}</h2>
-              <button
-                type="button"
-                className="table-trash-btn"
-                onClick={handleTrashClick}
-              >
-                🗑 {t.tableTrashLabel}
-              </button>
+              <div className="table-header-buttons">
+                <button
+                  type="button"
+                  className="table-trash-btn"
+                  onClick={handleOpenTrashPage}
+                  title={t.trashTitle}
+                >
+                  <img
+                    src={TrashCanIcon}
+                    alt={t.trashTitle}
+                    className="table-header-icon"
+                  />
+                </button>
+                <button
+                  type="button"
+                  className="table-trash-btn table-trash-btn-secondary"
+                  onClick={handleMoveSelectedToTrash}
+                  disabled={selectedPaths.size === 0}
+                  title={t.tableTrashLabel}
+                >
+                  <img
+                    src={DeleteIcon}
+                    alt={t.tableTrashLabel}
+                    className="table-header-icon"
+                  />
+                </button>
+              </div>
             </div>
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
+                    <th>
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
                     <th>{t.colName}</th>
                     <th>{t.colExt}</th>
                     <th>{t.colSize}</th>
@@ -391,6 +523,13 @@ function App() {
                 <tbody>
                   {files.map((file) => (
                     <tr key={file.path}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedPaths.has(file.path)}
+                          onChange={() => toggleFileSelection(file.path)}
+                        />
+                      </td>
                       <td title={file.path}>{file.name}</td>
                       <td>{file.ext}</td>
                       <td>{formatSize(file.size_bytes)}</td>
@@ -415,7 +554,6 @@ function App() {
         />
       )}
 
-
       {isStatsOpen && (
         <StatsPage
           t={t}
@@ -426,6 +564,16 @@ function App() {
         />
       )}
 
+      {isTrashOpen && (
+        <TrashPage
+          t={t}
+          items={trashItems}
+          onClose={() => setIsTrashOpen(false)}
+          onRestore={handleRestoreFromTrash}
+          onPermanentDelete={handlePermanentDelete}
+          onClearAll={handleClearTrash}
+        />
+      )}
 
       {scanPanelVisible && (
         <div className="scan-overlay-backdrop">

@@ -65,6 +65,17 @@ export interface AppTexts {
   statsWeekDaysShort: string[];
 
   statsWeekEmpty: string;
+
+  backButtonLabel: string;
+
+  trashTitle: string;
+  trashSubtitle: string;
+  trashEmptyMessage: string;
+  trashAddedAt: string;
+  trashActions: string;
+  trashRestore: string;
+  trashDelete: string;
+  trashClearAll: string;
 }
 
 export const TEXTS: Record<Lang, AppTexts> = {
@@ -135,6 +146,17 @@ export const TEXTS: Record<Lang, AppTexts> = {
 
     statsWeekDaysShort: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"],
     statsWeekEmpty: "Немає даних за тиждень — зробіть кілька сканувань.",
+
+    backButtonLabel: "Назад",
+
+    trashTitle: "Кошик",
+    trashSubtitle: "Перед остаточним видаленням файли потрапляють сюди.",
+    trashEmptyMessage: "Кошик порожній. Перемістіть сюди файли з робочого стола.",
+    trashAddedAt: "Додано",
+    trashActions: "Дії",
+    trashRestore: "Повернути",
+    trashDelete: "Видалити назавжди",
+    trashClearAll: "Очистити кошик",
   },
 
   en: {
@@ -190,7 +212,7 @@ export const TEXTS: Record<Lang, AppTexts> = {
 
     historyLabel: "History",
     statsLabel: "Statistics",
-    tableTrashLabel: "Move to recycle bin",
+    tableTrashLabel: "Move to trash",
 
     statsSubtitle: "How clean your desktop was over the last week.",
     statsChartTitle: "Desktop cleanliness over the last week",
@@ -205,6 +227,17 @@ export const TEXTS: Record<Lang, AppTexts> = {
 
     statsWeekDaysShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     statsWeekEmpty: "No weekly stats yet — run a few scans to see the trend.",
+
+    backButtonLabel: "Back",
+
+    trashTitle: "Trash",
+    trashSubtitle: "Files are moved here before being permanently deleted.",
+    trashEmptyMessage: "Trash is empty. Move some desktop files here first.",
+    trashAddedAt: "Added",
+    trashActions: "Actions",
+    trashRestore: "Restore",
+    trashDelete: "Delete permanently",
+    trashClearAll: "Empty trash",
   },
 
   ru: {
@@ -274,6 +307,18 @@ export const TEXTS: Record<Lang, AppTexts> = {
     statsMetricWeeklySub: "Среднее значение за неделю",
 
     statsWeekDaysShort: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
-    statsWeekEmpty: "Пока нет данных за неделю — выполните несколько сканирований.",
+    statsWeekEmpty:
+      "Пока нет данных за неделю — выполните несколько сканирований.",
+
+    backButtonLabel: "Назад",
+
+    trashTitle: "Корзина",
+    trashSubtitle: "Перед окончательным удалением файлы попадают сюда.",
+    trashEmptyMessage: "Корзина пуста. Переместите сюда файлы с рабочего стола.",
+    trashAddedAt: "Добавлено",
+    trashActions: "Действия",
+    trashRestore: "Восстановить",
+    trashDelete: "Удалить навсегда",
+    trashClearAll: "Очистить корзину",
   },
 };
