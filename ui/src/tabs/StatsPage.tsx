@@ -1,5 +1,6 @@
 import React from "react";
 import { WeeklyCleanlinessChart, type WeeklyPoint } from "../components/WeeklyCleanlinessChart";
+import "./css-styles/StatsPage.css";
 
 interface StatsPageProps {
   t: any;
