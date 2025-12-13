@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { DesktopFile } from "./types";
 import { CircularProgress } from "./components/CircularProgress";
@@ -20,6 +20,7 @@ import DeleteIcon from "./assets/DELETE.png";
 import { SettingsPage } from "./tabs/SettingsPage";
 import { StatsPage } from "./tabs/StatsPage";
 import { TrashPage } from "./tabs/TrashPage";
+import { ProfilePage } from "./tabs/ProfilePage";
 
 import { loadSettings, saveSettings } from "./tabs/settingsStorage";
 
@@ -35,8 +36,12 @@ declare global {
       };
 
       setAutorun?: (enabled: boolean, cb?: (status: string) => void) => void | string;
-
       getAutorunEnabled?: (cb?: (value: boolean) => void) => void | boolean;
+
+      labelFile?: (path: string, label: string | null, cb?: (ok: boolean) => void) => void | boolean;
+      setCategory?: (path: string, category: string | null, cb?: (ok: boolean) => void) => void | boolean;
+
+      getProfileSummary?: (cb?: (payload: string) => void) => void | string;
     };
   }
 }
@@ -57,7 +62,19 @@ type TrashEntry = {
   addedAt: string;
 };
 
-// -------------------- Хелпери --------------------
+type ProfileSummary = {
+  version?: number;
+  total_records?: number;
+  labeled_records?: number;
+  categorized_records?: number;
+  labels?: Record<string, number>;
+  categories?: Record<string, number>;
+  top_label?: string | null;
+  top_category?: string | null;
+  error?: string;
+};
+
+// -------------------- Helpers --------------------
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -71,7 +88,7 @@ function getCategory(file: DesktopFile, lang: Lang): string {
   const ext = file.ext.toLowerCase();
 
   if ([".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"].includes(ext)) return t.catImages;
-  if ([".txt", ".pdf", ".doc", ".docx", ".xlsx", ".pptx"].includes(ext)) return t.catDocs;
+  if ([".txt", ".pdf", ".doc", ".docx", ".xlsx", ".pptx", ".dwg"].includes(ext)) return t.catDocs;
   if ([".zip", ".rar", ".7z"].includes(ext)) return t.catArchives;
   return t.catOther;
 }
@@ -96,13 +113,11 @@ function callBridge<T>(fn: unknown, args: unknown[] = []): Promise<T> {
 
       const f = fn as (...all: any[]) => any;
 
-      // Якщо функція очікує callback (дуже типово для WebChannel)
       if (f.length >= args.length + 1) {
         f(...args, (res: T) => resolve(res));
         return;
       }
 
-      // fallback: sync return
       const res = f(...args);
       resolve(res as T);
     } catch (e) {
@@ -111,7 +126,25 @@ function callBridge<T>(fn: unknown, args: unknown[] = []): Promise<T> {
   });
 }
 
-// -------------------- Головний компонент --------------------
+function labelShort(label: string | null | undefined): string {
+  if (!label) return "-";
+  if (label === "trash") return "Trash";
+  if (label === "pinned") return "Pinned";
+  if (label === "keep") return "Keep";
+  if (label === "organize") return "Organize";
+  return label;
+}
+
+function categoryShort(cat: string | null | undefined): string {
+  if (!cat) return "-";
+  if (cat === "study") return "Study";
+  if (cat === "work") return "Work";
+  if (cat === "personal") return "Personal";
+  if (cat === "games") return "Games";
+  return cat;
+}
+
+// -------------------- App --------------------
 
 function App() {
   const [files, setFiles] = useState<DesktopFile[]>([]);
@@ -122,6 +155,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const [cleanupThreshold, setCleanupThreshold] = useState(30);
   const [ignoreList] = useState<string[]>([]);
@@ -156,7 +190,13 @@ function App() {
   const totalDeletedFiles = 0;
   const totalFreedBytes = 0;
 
-  // -------------------- Settings storage: load/save --------------------
+  const [isLabeling, setIsLabeling] = useState(false);
+  const [bulkLabel, setBulkLabel] = useState<"trash" | "pinned" | "keep" | "organize" | "none">("none");
+  const [bulkCategory, setBulkCategory] = useState<"study" | "work" | "personal" | "games" | "none">("none");
+
+  const [profileSummary, setProfileSummary] = useState<ProfileSummary | null>(null);
+
+  // -------------------- Settings storage --------------------
 
   useEffect(() => {
     const s = loadSettings();
@@ -172,7 +212,25 @@ function App() {
     saveSettings({ lang, cleanupThreshold });
   }, [lang, cleanupThreshold, settingsHydrated]);
 
-  // -------------------- Autorun sync helpers --------------------
+  // -------------------- Profile summary load --------------------
+
+  const loadProfile = async () => {
+    const bridge = window.desktopBridge;
+    if (!bridge?.getProfileSummary) {
+      setProfileSummary(null);
+      return;
+    }
+
+    try {
+      const payload = await callBridge<string>(bridge.getProfileSummary, []);
+      const parsed = JSON.parse(payload) as ProfileSummary;
+      setProfileSummary(parsed);
+    } catch {
+      setProfileSummary({ error: "Failed to load profile summary" });
+    }
+  };
+
+  // -------------------- Autorun sync --------------------
 
   const syncAutorunFromOS = async () => {
     const bridge = window.desktopBridge;
@@ -186,17 +244,16 @@ function App() {
     }
   };
 
-  // -------------------- Bridge init (filesUpdated + autorun sync) --------------------
+  // -------------------- Bridge init --------------------
 
   useEffect(() => {
     const tryInitBridge = () => {
       const bridge = window.desktopBridge;
       if (!bridge) return;
 
-      // autorun sync (джерело істини — ОС)
       void syncAutorunFromOS();
+      void loadProfile();
 
-      // filesUpdated connect (один раз)
       if (
         !isFilesUpdatedConnectedRef.current &&
         bridge.filesUpdated &&
@@ -204,7 +261,6 @@ function App() {
       ) {
         const handler = (payload: string) => {
           try {
-            // Очікуємо: { files: DesktopFile[], error: string | null }
             const parsed = JSON.parse(payload) as {
               files?: DesktopFile[];
               error?: string | null;
@@ -230,12 +286,11 @@ function App() {
             const todayIndex = normalizeDayIndex(new Date().getDay());
             setWeeklyStats((prev) => {
               const filtered = prev.filter((p) => p.dayIndex !== todayIndex);
-              const next: WeeklyPoint[] = [
-                ...filtered,
-                { dayIndex: todayIndex, value: Math.round(cleanlinessNow) },
-              ];
+              const next: WeeklyPoint[] = [...filtered, { dayIndex: todayIndex, value: Math.round(cleanlinessNow) }];
               return next.slice(-7);
             });
+
+            void loadProfile();
           } catch {
             setError(tRef.current.errorFallback);
             setFiles([]);
@@ -256,12 +311,9 @@ function App() {
 
     const onReady = () => tryInitBridge();
 
-    // одразу
     tryInitBridge();
-    // якщо додасте dispatch у index.html — буде стабільніше
     window.addEventListener("desktopBridgeReady", onReady);
 
-    // fallback: кілька спроб (на випадок коли подію не додали)
     const retryId = window.setInterval(() => {
       if (window.desktopBridge) {
         tryInitBridge();
@@ -289,7 +341,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // -------------------- Анімація прогрес-бару сканування --------------------
+  // -------------------- Scan progress animation --------------------
 
   useEffect(() => {
     if (isScanning) {
@@ -317,7 +369,7 @@ function App() {
     };
   }, [isScanning]);
 
-  // -------------------- Обчислення показників для UI --------------------
+  // -------------------- Home computed --------------------
 
   const totalSize = files.reduce((sum, f) => sum + f.size_bytes, 0);
 
@@ -325,44 +377,62 @@ function App() {
     ? Math.max(0, Math.min(100, 100 - (files.length / MAX_FILES_FOR_100) * 100))
     : 100;
 
-  const categoryMap = new Map<string, number>();
-  for (const f of files) {
-    const cat = getCategory(f, lang);
-    categoryMap.set(cat, (categoryMap.get(cat) ?? 0) + 1);
-  }
+  const chartData: MiniBarDatum[] = useMemo(() => {
+    const categoryMap = new Map<string, number>();
+    for (const f of files) {
+      const cat = getCategory(f, lang);
+      categoryMap.set(cat, (categoryMap.get(cat) ?? 0) + 1);
+    }
+    return Array.from(categoryMap.entries()).map(([label, value]) => ({ label, value }));
+  }, [files, lang]);
 
-  const chartData: MiniBarDatum[] = Array.from(categoryMap.entries()).map(([label, value]) => ({
-    label,
-    value,
-  }));
-
-  // -------------------- Обробники верхнього бару --------------------
+  // -------------------- Topbar handlers --------------------
 
   const openSettings = () => {
     setIsSettingsOpen(true);
     setIsStatsOpen(false);
     setIsTrashOpen(false);
+    setIsProfileOpen(false);
     setIsLangMenuOpen(false);
   };
 
-  const closeSettings = () => {
+  const closeSettings = () => setIsSettingsOpen(false);
+
+  const handleStatsClick = () => {
+    setIsStatsOpen(true);
     setIsSettingsOpen(false);
+    setIsTrashOpen(false);
+    setIsProfileOpen(false);
+    setIsLangMenuOpen(false);
   };
 
-  const handleLangButtonClick = () => {
-    setIsLangMenuOpen((prev) => !prev);
+  const handleProfileClick = () => {
+    setIsProfileOpen(true);
+    setIsSettingsOpen(false);
+    setIsStatsOpen(false);
+    setIsTrashOpen(false);
+    setIsLangMenuOpen(false);
+    void loadProfile();
   };
+
+  const handleLangButtonClick = () => setIsLangMenuOpen((prev) => !prev);
 
   const handleSelectLang = (newLang: Lang) => {
     setLang(newLang);
     setIsLangMenuOpen(false);
   };
 
-  const handleThresholdChange = (value: number) => {
-    setCleanupThreshold(value);
+  const handleThresholdChange = (value: number) => setCleanupThreshold(value);
+
+  const handleOpenTrashPage = () => {
+    setIsTrashOpen(true);
+    setIsSettingsOpen(false);
+    setIsStatsOpen(false);
+    setIsProfileOpen(false);
+    setIsLangMenuOpen(false);
   };
 
-  // -------------------- Autorun toggle (коректно для WebChannel) --------------------
+  // -------------------- Autorun toggle --------------------
 
   const handleToggleAutorun = (value: boolean) => {
     const bridge = window.desktopBridge;
@@ -384,7 +454,6 @@ function App() {
           return;
         }
 
-        // після виклику — синхронізуємося з ОС
         await syncAutorunFromOS();
       } catch (e) {
         console.error("Failed to call setAutorun:", e);
@@ -412,23 +481,7 @@ function App() {
     }
   };
 
-  const handleCloseScanPanel = () => {
-    setScanPanelVisible(false);
-  };
-
-  const handleStatsClick = () => {
-    setIsStatsOpen(true);
-    setIsSettingsOpen(false);
-    setIsTrashOpen(false);
-    setIsLangMenuOpen(false);
-  };
-
-  const handleOpenTrashPage = () => {
-    setIsTrashOpen(true);
-    setIsSettingsOpen(false);
-    setIsStatsOpen(false);
-    setIsLangMenuOpen(false);
-  };
+  const handleCloseScanPanel = () => setScanPanelVisible(false);
 
   // -------------------- Selection --------------------
 
@@ -452,6 +505,47 @@ function App() {
       for (const f of files) next.add(f.path);
       return next;
     });
+  };
+
+  // -------------------- Intelligence: bulk apply --------------------
+
+  const applyBulk = () => {
+    const bridge = window.desktopBridge;
+    if (!bridge) {
+      setError("Desktop bridge is not available");
+      return;
+    }
+
+    const paths = Array.from(selectedPaths);
+    if (paths.length === 0) return;
+
+    setIsLabeling(true);
+
+    const labelValue: string | null = bulkLabel === "none" ? null : bulkLabel;
+    const categoryValue: string | null = bulkCategory === "none" ? null : bulkCategory;
+
+    (async () => {
+      try {
+        if (bridge.labelFile) {
+          for (const p of paths) {
+            await callBridge<boolean>(bridge.labelFile, [p, labelValue]);
+          }
+        }
+
+        if (bridge.setCategory) {
+          for (const p of paths) {
+            await callBridge<boolean>(bridge.setCategory, [p, categoryValue]);
+          }
+        }
+
+        if (typeof bridge.scanDesktop === "function") bridge.scanDesktop();
+      } catch (e) {
+        console.error("applyBulk failed:", e);
+        setError(tRef.current.errorFallback);
+      } finally {
+        setIsLabeling(false);
+      }
+    })();
   };
 
   // -------------------- Local Trash --------------------
@@ -498,42 +592,45 @@ function App() {
     setTrashItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const handleClearTrash = () => {
-    setTrashItems([]);
-  };
+  const handleClearTrash = () => setTrashItems([]);
 
   // -------------------- Render --------------------
+
+  const showHome = !isSettingsOpen && !isStatsOpen && !isTrashOpen && !isProfileOpen;
 
   return (
     <div className="app">
       <div className="topbar">
+        {/* Profile icon button in left corner */}
+        <button type="button" className="top-btn top-btn-icon" onClick={handleProfileClick} title="Profile" style={{ marginLeft: 2 }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.51 4.51 0 0 0 12 12Z"
+              stroke="#111827"
+              strokeWidth="1.7"
+            />
+            <path
+              d="M4.5 20.5c1.6-4 13.4-4 15 0"
+              stroke="#111827"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+
         <div className="topbar-spacer" />
+
         <div className="topbar-buttons">
-          <button
-            type="button"
-            className="top-btn top-btn-icon"
-            onClick={openSettings}
-            title={t.settingsLabel}
-          >
+          <button type="button" className="top-btn top-btn-icon" onClick={openSettings} title={t.settingsLabel}>
             <img src={SettingsIcon} alt={t.settingsLabel} className="top-icon-img" />
           </button>
 
-          <button
-            type="button"
-            className="top-btn top-btn-icon"
-            onClick={handleStatsClick}
-            title={t.statsLabel}
-          >
+          <button type="button" className="top-btn top-btn-icon" onClick={handleStatsClick} title={t.statsLabel}>
             <img src={StatsIcon} alt={t.statsLabel} className="top-icon-img" />
           </button>
 
           <div className="lang-menu-wrapper">
-            <button
-              type="button"
-              className="top-btn top-btn-icon"
-              onClick={handleLangButtonClick}
-              title={t.langLabel}
-            >
+            <button type="button" className="top-btn top-btn-icon" onClick={handleLangButtonClick} title={t.langLabel}>
               <img src={LANG_ICONS[lang]} alt={t.langLabel} className="top-icon-img" />
             </button>
 
@@ -566,7 +663,8 @@ function App() {
         </div>
       </div>
 
-      {!isSettingsOpen && !isStatsOpen && !isTrashOpen && (
+      {/* Home */}
+      {showHome && (
         <>
           <section className="summary">
             <div className="summary-left">
@@ -598,12 +696,7 @@ function App() {
           </section>
 
           <section className="actions-section">
-            <button
-              type="button"
-              className="primary-action-btn"
-              onClick={handleStartScan}
-              disabled={isScanning}
-            >
+            <button type="button" className="primary-action-btn" onClick={handleStartScan} disabled={isScanning}>
               {isScanning ? `${t.startScanButton}...` : t.startScanButton}
             </button>
           </section>
@@ -611,13 +704,9 @@ function App() {
           <section className="table-wrapper">
             <div className="table-header">
               <h2>{t.tableTitle}</h2>
+
               <div className="table-header-buttons">
-                <button
-                  type="button"
-                  className="table-trash-btn"
-                  onClick={handleOpenTrashPage}
-                  title={t.trashTitle}
-                >
+                <button type="button" className="table-trash-btn" onClick={handleOpenTrashPage} title={t.trashTitle}>
                   <img src={TrashCanIcon} alt={t.trashTitle} className="table-header-icon" />
                 </button>
 
@@ -633,6 +722,56 @@ function App() {
               </div>
             </div>
 
+            {/* compact bulk toolbar */}
+            <div style={{ display: "flex", gap: 10, alignItems: "center", margin: "10px 0 6px 0", flexWrap: "wrap" }}>
+              <div style={{ opacity: 0.85, fontSize: 13 }}>
+                Selected: <b>{selectedPaths.size}</b>
+              </div>
+
+              <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ opacity: 0.8, fontSize: 12 }}>Label</span>
+                <select
+                  value={bulkLabel}
+                  onChange={(e) => setBulkLabel(e.target.value as any)}
+                  disabled={isLabeling}
+                  style={{ height: 34, borderRadius: 10, padding: "0 10px" }}
+                >
+                  <option value="none">Clear</option>
+                  <option value="trash">Trash</option>
+                  <option value="keep">Keep</option>
+                  <option value="pinned">Pinned</option>
+                  <option value="organize">Organize</option>
+                </select>
+              </label>
+
+              <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ opacity: 0.8, fontSize: 12 }}>Category</span>
+                <select
+                  value={bulkCategory}
+                  onChange={(e) => setBulkCategory(e.target.value as any)}
+                  disabled={isLabeling}
+                  style={{ height: 34, borderRadius: 10, padding: "0 10px" }}
+                >
+                  <option value="none">Clear</option>
+                  <option value="study">Study</option>
+                  <option value="work">Work</option>
+                  <option value="personal">Personal</option>
+                  <option value="games">Games</option>
+                </select>
+              </label>
+
+              <button
+                type="button"
+                className="table-trash-btn table-trash-btn-secondary"
+                onClick={applyBulk}
+                disabled={selectedPaths.size === 0 || isLabeling}
+                title="Apply label/category to selected files"
+                style={{ height: 34, padding: "0 14px" }}
+              >
+                Apply
+              </button>
+            </div>
+
             <div className="table-scroll">
               <table>
                 <thead>
@@ -643,27 +782,40 @@ function App() {
                     <th>{t.colName}</th>
                     <th>{t.colExt}</th>
                     <th>{t.colSize}</th>
+                    <th>Score</th>
+                    <th>Label</th>
+                    <th>Category</th>
                     <th>{t.colModified}</th>
                     <th>{t.colAccess}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {files.map((file) => (
-                    <tr key={file.path}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedPaths.has(file.path)}
-                          onChange={() => toggleFileSelection(file.path)}
-                        />
-                      </td>
-                      <td title={file.path}>{file.name}</td>
-                      <td>{file.ext}</td>
-                      <td>{formatSize(file.size_bytes)}</td>
-                      <td>{new Date(file.last_modified).toLocaleString()}</td>
-                      <td>{new Date(file.last_access).toLocaleString()}</td>
-                    </tr>
-                  ))}
+                  {files.map((file) => {
+                    const score = typeof (file as any).trash_score === "number" ? ((file as any).trash_score as number) : null;
+                    const reasons = Array.isArray((file as any).trash_reasons) ? ((file as any).trash_reasons as string[]) : [];
+                    const ulabel = (file as any).user_label as string | null | undefined;
+                    const ucat = (file as any).user_category as string | null | undefined;
+
+                    return (
+                      <tr key={file.path}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedPaths.has(file.path)}
+                            onChange={() => toggleFileSelection(file.path)}
+                          />
+                        </td>
+                        <td title={file.path}>{file.name}</td>
+                        <td>{file.ext}</td>
+                        <td>{formatSize(file.size_bytes)}</td>
+                        <td title={reasons.length ? reasons.join(", ") : ""}>{score === null ? "-" : score.toFixed(2)}</td>
+                        <td>{labelShort(ulabel)}</td>
+                        <td>{categoryShort(ucat)}</td>
+                        <td>{new Date(file.last_modified).toLocaleString()}</td>
+                        <td>{new Date(file.last_access).toLocaleString()}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -693,6 +845,15 @@ function App() {
         />
       )}
 
+      {isProfileOpen && (
+        <ProfilePage
+          t={t}
+          onClose={() => setIsProfileOpen(false)}
+          summary={profileSummary}
+          files={files}
+        />
+      )}
+
       {isTrashOpen && (
         <TrashPage
           t={t}
@@ -708,13 +869,9 @@ function App() {
         <div className="scan-overlay-backdrop">
           <div className="scan-overlay">
             <div className="scan-overlay-header">
-              <div className="scan-overlay-title">
-                {isScanning ? t.scanDialogScanningTitle : t.scanDialogDoneTitle}
-              </div>
+              <div className="scan-overlay-title">{isScanning ? t.scanDialogScanningTitle : t.scanDialogDoneTitle}</div>
               <div className="scan-overlay-subtitle">
-                {isScanning
-                  ? t.scanDialogScanningSubtitle
-                  : `${t.scanDialogFilesLabel}: ${scanFilesCount}`}
+                {isScanning ? t.scanDialogScanningSubtitle : `${t.scanDialogFilesLabel}: ${scanFilesCount}`}
               </div>
             </div>
 
@@ -740,11 +897,7 @@ function App() {
 
             <div className="scan-overlay-footer">
               {!isScanning && (
-                <button
-                  type="button"
-                  className="scan-overlay-close-btn"
-                  onClick={handleCloseScanPanel}
-                >
+                <button type="button" className="scan-overlay-close-btn" onClick={handleCloseScanPanel}>
                   {t.scanDialogClose}
                 </button>
               )}
