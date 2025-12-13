@@ -7,6 +7,9 @@ interface SettingsPageProps {
   cleanupThreshold: number;
   onChangeThreshold: (value: number) => void;
   onClose: () => void;
+
+  autorunEnabled: boolean;
+  onToggleAutorun: (value: boolean) => void;
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({
@@ -15,6 +18,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   cleanupThreshold,
   onChangeThreshold,
   onClose,
+  autorunEnabled,
+  onToggleAutorun,
 }) => {
   return (
     <div className="settings-page">
@@ -35,8 +40,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
         <div className="settings-section settings-main-row">
           <div className="settings-column">
+            {/* Автозапуск — керований чекбокс, зав’язаний на autorunEnabled */}
             <label className="settings-row">
-              <input type="checkbox" className="settings-checkbox" />
+              <input
+                type="checkbox"
+                className="settings-checkbox"
+                checked={autorunEnabled}
+                onChange={(e) => onToggleAutorun(e.target.checked)}
+              />
               <div className="settings-row-text">
                 <div className="settings-row-title">
                   {t.settingsAutoLaunchTitle}
@@ -47,6 +58,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
             </label>
 
+            {/* Поки що ці два чекбокси “глухі” (без логіки) */}
             <label className="settings-row">
               <input type="checkbox" className="settings-checkbox" />
               <div className="settings-row-text">
