@@ -11,7 +11,6 @@ from PySide6.QtGui import QGuiApplication
 from scanner import scan_desktop
 from autorun import setup_autorun_status, is_autorun_enabled, AutorunTarget
 
-
 class DesktopBridge(QObject):
     filesUpdated = Signal(str)
 
@@ -27,6 +26,10 @@ class DesktopBridge(QObject):
         except Exception as e:
             payload = json.dumps({"files": [], "error": str(e)}, ensure_ascii=False, default=str)
         self.filesUpdated.emit(payload)
+    
+    @Slot(bool, result=str)
+    def setAutorun(self, enabled: bool) -> str:
+        return setup_autorun_status(enable_autorun=enabled)
 
     @Slot(bool, result=str)
     def setAutorun(self, enabled: bool) -> str:
