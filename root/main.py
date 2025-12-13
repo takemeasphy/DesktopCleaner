@@ -11,6 +11,12 @@ from PySide6.QtGui import QGuiApplication
 from scanner import scan_desktop
 from autorun import setup_autorun_status, is_autorun_enabled, AutorunTarget
 
+# NEW: intelligence state API
+from intelligence.state import label_file, category_file
+from intelligence.state import get_profile_summary
+
+
+
 class DesktopBridge(QObject):
     filesUpdated = Signal(str)
 
@@ -22,14 +28,27 @@ class DesktopBridge(QObject):
     def scanDesktop(self):
         try:
             files = scan_desktop()
-            payload = json.dumps({"files": files, "error": None}, ensure_ascii=False, default=str)
+            payload = json.dumps(
+                {"files": files, "error": None},
+                ensure_ascii=False,
+                default=str,
+            )
         except Exception as e:
-            payload = json.dumps({"files": [], "error": str(e)}, ensure_ascii=False, default=str)
+            payload = json.dumps(
+                {"files": [], "error": str(e)},
+                ensure_ascii=False,
+                default=str,
+            )
         self.filesUpdated.emit(payload)
     
-    @Slot(bool, result=str)
-    def setAutorun(self, enabled: bool) -> str:
-        return setup_autorun_status(enable_autorun=enabled)
+    @Slot(result=str)
+    def getProfileSummary(self) -> str:
+        try:
+            summary = get_profile_summary()
+            return json.dumps(summary, ensure_ascii=False)
+        except Exception as e:
+            return json.dumps({"error": str(e)}, ensure_ascii=False)
+
 
     @Slot(bool, result=str)
     def setAutorun(self, enabled: bool) -> str:
@@ -38,6 +57,44 @@ class DesktopBridge(QObject):
     @Slot(result=bool)
     def getAutorunEnabled(self) -> bool:
         return is_autorun_enabled()
+
+    # (trash/keep/pinned/organize/none) 
+    @Slot(str, str, result=bool)
+    def labelFile(self, path: str, label: str) -> bool:
+        """
+        label: "trash" | "keep" | "pinned" | "organize" | "none"
+        """
+        try:
+            normalized = (label or "").strip().lower()
+            if normalized in ("", "none", "null"):
+                normalized = None
+
+            allowed = {None, "trash", "keep", "pinned", "organize"}
+            if normalized not in allowed:
+                normalized = None
+
+            return bool(label_file(path, normalized))
+        except Exception:
+            return False
+
+    # categories (study/work/personal/games/none) 
+    @Slot(str, str, result=bool)
+    def setCategory(self, path: str, category: str) -> bool:
+        """
+        category: "study" | "work" | "personal" | "games" | "none"
+        """
+        try:
+            normalized = (category or "").strip().lower()
+            if normalized in ("", "none", "null"):
+                normalized = None
+
+            allowed = {None, "study", "work", "personal", "games"}
+            if normalized not in allowed:
+                normalized = None
+
+            return bool(category_file(path, normalized))
+        except Exception:
+            return False
 
 
 class MainWindow(QMainWindow):
@@ -64,17 +121,17 @@ class MainWindow(QMainWindow):
         self.resize(width, height)
         self.setMinimumSize(1024, 640)
 
-        # централ
+        # централ 
         x = int((screen_width - width) / 2)
         y = int((screen_height - height) / 2)
         self.move(x, y)
 
         view = QWebEngineView(self)
 
-        # корень
+        # корень проекта 
         project_root = Path(__file__).resolve().parent.parent
 
-        # таргет автозапуска
+        # target автозапуска
         bat_path = project_root / "run_desktop.bat"
         if bat_path.exists():
             autorun_target = AutorunTarget(
@@ -82,7 +139,7 @@ class MainWindow(QMainWindow):
                 working_dir=str(project_root),
             )
         else:
-            # fallback: pythonw.exe main.py 
+            # fallback: pythonw.exe main.py
             python_exe = Path(sys.executable)
             pythonw = python_exe.with_name("pythonw.exe")
             launcher = str(pythonw if pythonw.exists() else python_exe)
@@ -108,7 +165,7 @@ class MainWindow(QMainWindow):
         self.channel.registerObject("desktopBridge", self.bridge)
         view.page().setWebChannel(self.channel)
 
-        #  index.html
+        # load index.html
         view.load(QUrl.fromLocalFile(str(index_file)))
 
         self.setCentralWidget(view)
